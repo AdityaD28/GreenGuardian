@@ -1,0 +1,146 @@
+<!-- File 2: Save this as `index.html` -->
+<!-- This is your HTML and JavaScript frontend. -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenGuardian - Plant Disease Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .loader {
+            border: 8px solid #f3f3f3; /* Light grey */
+            border-top: 8px solid #3498db; /* Blue */
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-green-700">GreenGuardian 🪴</h1>
+            <p class="text-lg text-gray-600 mt-2">Your AI-powered plant health assistant.</p>
+        </header>
+
+        <!-- Uploader Section -->
+        <div class="bg-white rounded-lg shadow-lg p-6 md:p-8 mb-8">
+            <div class="text-center">
+                <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFileSelect(event)">
+                <label for="file-input" class="cursor-pointer inline-block bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition-colors duration-300">
+                    Select a Leaf Image
+                </label>
+                <p id="file-name" class="text-gray-500 mt-2">No file chosen</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="hidden">
+            
+            <!-- Image and Diagnosis -->
+            <div class="grid md:grid-cols-2 gap-8 mb-8">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold mb-4 text-center">Your Image</h2>
+                    <img id="preview-image" src="#" alt="Selected leaf image" class="rounded-lg w-full h-auto object-cover max-h-80">
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6 flex flex-col justify-center">
+                     <h2 class="text-2xl font-bold mb-4">Diagnosis</h2>
+                     <p class="text-3xl font-bold text-blue-600" id="disease-name">Detecting...</p>
+                     <p class="text-md text-gray-500 mt-2" id="confidence-score">Confidence: --</p>
+                </div>
+            </div>
+
+            <!-- AI Recommendation -->
+            <div class="bg-white rounded-lg shadow-md p-6 md:p-8">
+                <h2 class="text-2xl font-bold mb-4">GreenGuardian's AI Recommendation</h2>
+                <div id="recommendation-output" class="prose max-w-none">
+                    <div class="flex justify-center items-center h-40">
+                        <div class="loader"></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const fileNameDisplay = document.getElementById('file-name');
+        const resultsSection = document.getElementById('results-section');
+        const previewImage = document.getElementById('preview-image');
+        const diseaseName = document.getElementById('disease-name');
+        const confidenceScore = document.getElementById('confidence-score');
+        const recommendationOutput = document.getElementById('recommendation-output');
+        const loaderHTML = '<div class="flex justify-center items-center h-40"><div class="loader"></div></div>';
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            fileNameDisplay.textContent = file.name;
+            resultsSection.classList.remove('hidden');
+            
+            // Reset UI
+            diseaseName.textContent = 'Detecting...';
+            confidenceScore.textContent = 'Confidence: --';
+            recommendationOutput.innerHTML = loaderHTML;
+
+            // Display image preview
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+            }
+            reader.readAsDataURL(file);
+
+            // Send file to backend
+            uploadAndPredict(file);
+        }
+
+        async function uploadAndPredict(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Update UI with results
+                diseaseName.textContent = data.disease;
+                confidenceScore.textContent = `Confidence: ${data.confidence}`;
+                // Use marked.js to render markdown from AI
+                recommendationOutput.innerHTML = marked.parse(data.recommendation);
+
+            } catch (error) {
+                console.error('Error during prediction:', error);
+                diseaseName.textContent = 'Error';
+                confidenceScore.textContent = 'Could not get prediction.';
+                recommendationOutput.innerHTML = `<p class="text-red-500">An error occurred while communicating with the server. Please check the console for details.</p>`;
+            }
+        }
+    </script>
+
+</body>
+</html>

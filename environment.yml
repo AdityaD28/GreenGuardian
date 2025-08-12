@@ -1,0 +1,17 @@
+# This file defines the exact environment for your app.
+name: greenguardian
+channels:
+  - apple
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pip
+  - tensorflow-deps
+  - pip:
+    - tensorflow-macos
+    - flask
+    - pillow
+    - google-generativeai
+    - Flask-SQLAlchemy
+    - Flask-Login
+    - Werkzeug
