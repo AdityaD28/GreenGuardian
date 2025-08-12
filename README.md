@@ -2,8 +2,7 @@
 
 GreenGuardian is a comprehensive web application that combines cutting-edge AI technology with user-friendly design to help gardeners, farmers, and plant enthusiasts identify, treat, and manage plant diseases effectively. Built with a modern tech stack, it offers real-time disease detection, personalized treatment recommendations, secure user authentication, and complete diagnosis history tracking.
 
-![GreenGuardian Banner](https://via.placeholder.com/800x200/22c55e/ffffff?text=GreenGuardian+AI+Plant+Health+Assistant)
-*(Replace with actual screenshot of your application)*
+![GreenGuardian Banner](https://github.com/AdityaD28/GreenGuardian/blob/main/GreenguardianBanner.png?raw=true)
 
 ---
 
