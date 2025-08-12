@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - GreenGuardian{% endblock %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Hero Section -->
+    <div class="text-center mb-12 animate-fade-in">
+        <h1 class="text-5xl font-bold text-white mb-4 drop-shadow-lg">
+            Welcome back, <span class="text-green-300">{{ current_user.username }}</span>! 🌿
+        </h1>
+        <p class="text-xl text-gray-100 mb-8 drop-shadow">Ready to diagnose your plants? Upload an image and let AI help your garden thrive!</p>
+    </div>
+
+<!-- Upload Section -->
+<div class="glass-effect upload-section rounded-3xl p-8 mb-12 transition-all duration-300" style="position: relative !important; transform: none !important; opacity: 1 !important; visibility: visible !important; display: block !important;">
+    <div class="text-center">
+        <div id="upload-area" class="relative border-3 border-dashed border-green-300 rounded-2xl p-12 transition-all duration-300 hover:border-green-500 hover:bg-green-50/30 group">
+            <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFileSelect(event)">
+            
+            <div id="upload-content" class="space-y-4">
+                <div class="mx-auto w-24 h-24 bg-green-100 rounded-full flex items-center justify-center group-hover:bg-green-200 transition-colors">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-green-600"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-bold text-white mb-2">Upload Plant Image</h3>
+                    <p class="text-gray-200 mb-4">Click the button below to select your plant image</p>
+                    <p class="text-sm text-gray-300">Supports: JPG, PNG, GIF (Max: 10MB)</p>
+                </div>
+                <button type="button" onclick="document.getElementById('file-input').click()" class="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 px-8 rounded-xl hover-glow transition-all inline-flex items-center space-x-2">
+                    <i class="fas fa-camera"></i>
+                    <span>Choose Image</span>
+                </button>
+            </div>
+        </div>
+        <p id="file-name" class="text-gray-300 mt-4 font-medium"></p>
+    </div>
+</div>
+
+    <!-- Results Section -->
+    <div id="results-section" class="hidden" style="display: none !important;">
+        <!-- Analysis Progress -->
+        <div id="analysis-progress" class="glass-effect rounded-2xl p-6 mb-8 text-center" style="display: none !important;">
+            <div class="flex items-center justify-center space-x-4">
+                <div class="loader"></div>
+                <div>
+                    <h3 class="text-xl font-bold text-white">Analyzing Your Plant...</h3>
+                    <p class="text-gray-200">Our AI is examining the image for diseases and health indicators</p>
+                </div>
+            </div>
+            <div class="mt-4 bg-gray-600 rounded-full h-2">
+                <div id="progress-bar" class="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full transition-all duration-1000" style="width: 0%"></div>
+            </div>
+        </div>    <div class="grid lg:grid-cols-2 gap-8 mb-8">
+        <!-- Image Preview -->
+        <div class="glass-effect rounded-2xl p-6 hover-glow transition-all">
+            <div class="flex items-center space-x-2 mb-4">
+                <i class="fas fa-image text-green-400"></i>
+                <h2 class="text-2xl font-bold text-white">Your Plant Image</h2>
+            </div>
+            <div class="relative overflow-hidden rounded-xl">
+                <img id="preview-image" src="#" alt="Selected plant image" class="w-full h-80 object-cover transition-transform duration-300 hover:scale-105">
+                <div class="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-sm">
+                    <i class="fas fa-search-plus"></i> Click to zoom
+                </div>
+            </div>
+        </div>
+
+        <!-- Diagnosis Results -->
+        <div class="glass-effect rounded-2xl p-6 hover-glow transition-all">
+            <div class="flex items-center space-x-2 mb-6">
+                <i class="fas fa-stethoscope text-green-400"></i>
+                <h2 class="text-2xl font-bold text-white">Diagnosis Results</h2>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- Disease Status -->
+                <div class="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl p-4 border border-green-400/20">
+                    <h3 class="font-bold text-gray-200 mb-2">Condition Detected:</h3>
+                    <p class="text-3xl font-bold text-white" id="disease-name">Analyzing...</p>
+                </div>
+
+                <!-- Confidence Level -->
+                <div class="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-xl p-4 border border-green-400/20">
+                    <h3 class="font-bold text-gray-200 mb-2">Confidence Level:</h3>
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-1 bg-gray-600 rounded-full h-3 max-w-[calc(100%-80px)] overflow-hidden">
+                            <div id="confidence-bar" class="bg-gradient-to-r from-green-400 to-emerald-600 h-3 rounded-full transition-all duration-1000 max-w-full" style="width: 0%"></div>
+                        </div>
+                        <span id="confidence-score" class="font-bold text-lg text-white whitespace-nowrap">--%</span>
+                    </div>
+                </div>
+
+                <!-- Health Status Icon -->
+                <div id="health-status" class="text-center p-4">
+                    <div id="status-icon" class="mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-2">
+                        <i class="text-3xl"></i>
+                    </div>
+                    <p id="status-text" class="font-medium text-white"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Recommendation -->
+    <div class="glass-effect rounded-2xl p-8 hover-glow transition-all">
+        <div class="flex items-center space-x-2 mb-6">
+            <i class="fas fa-robot text-green-400"></i>
+            <h2 class="text-3xl font-bold text-white">AI Treatment Recommendation</h2>
+        </div>
+        <div id="recommendation-output" class="prose max-w-none custom-scrollbar text-gray-200">
+            <div class="flex justify-center items-center h-40">
+                <div class="text-center">
+                    <div class="loader mb-4"></div>
+                    <p class="text-gray-300">Generating personalized treatment recommendations...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Diagnoses Preview -->
+<div class="mt-16 animate-fade-in">
+    <div class="flex items-center justify-between mb-8">
+        <h2 class="text-3xl font-bold text-white drop-shadow-lg">Recent Diagnoses</h2>
+        <a href="{{ url_for('history') }}" class="text-green-300 hover:text-green-200 font-medium inline-flex items-center space-x-1 transition-colors">
+            <span>View All</span>
+            <i class="fas fa-arrow-right"></i>
+        </a>
+    </div>
+    <div id="recent-diagnoses" class="grid md:grid-cols-3 gap-6">
+        <!-- Recent diagnoses will be loaded here -->
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div id="image-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50" onclick="closeImageModal()">
+    <div class="max-w-4xl max-h-full p-4">
+        <img id="modal-image" src="#" alt="Full size image" class="max-w-full max-h-full rounded-lg">
+        <button onclick="closeImageModal()" class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    const fileInput = document.getElementById('file-input');
+    const fileNameDisplay = document.getElementById('file-name');
+    const resultsSection = document.getElementById('results-section');
+    const analysisProgress = document.getElementById('analysis-progress');
+    const previewImage = document.getElementById('preview-image');
+    const diseaseName = document.getElementById('disease-name');
+    const confidenceScore = document.getElementById('confidence-score');
+    const confidenceBar = document.getElementById('confidence-bar');
+    const progressBar = document.getElementById('progress-bar');
+    const recommendationOutput = document.getElementById('recommendation-output');
+    const healthStatus = document.getElementById('health-status');
+    const statusIcon = document.getElementById('status-icon');
+    const statusText = document.getElementById('status-text');
+    const uploadArea = document.getElementById('upload-area');
+
+    // Only button click functionality - no drag and drop
+    function handleFileSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('Please select an image file.');
+            return;
+        }
+
+        // Validate file size (10MB)
+        if (file.size > 10 * 1024 * 1024) {
+            alert('File size must be less than 10MB.');
+            return;
+        }
+
+        fileNameDisplay.innerHTML = `<i class="fas fa-file-image text-primary-600"></i> ${file.name}`;
+        
+        // Show results section and analysis progress with explicit styles
+        resultsSection.classList.remove('hidden');
+        resultsSection.style.display = 'block';
+        resultsSection.style.visibility = 'visible';
+        resultsSection.style.opacity = '1';
+        
+        analysisProgress.classList.remove('hidden');
+        analysisProgress.style.display = 'block';
+        analysisProgress.style.visibility = 'visible';
+        analysisProgress.style.opacity = '1';
+        
+        console.log('Analysis section should now be visible'); // Debug log
+        
+        // Reset UI
+        diseaseName.textContent = 'Analyzing...';
+        confidenceScore.textContent = '--%';
+        confidenceBar.style.width = '0%';
+        progressBar.style.width = '0%';
+        
+        // Simulate progress
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            progressBar.style.width = progress + '%';
+        }, 200);
+
+        const reader = new FileReader();
+        reader.onload = function(e) { 
+            previewImage.src = e.target.result;
+            previewImage.onclick = () => openImageModal(e.target.result);
+        }
+        reader.readAsDataURL(file);
+        
+        uploadAndPredict(file, progressInterval);
+    }
+
+    async function uploadAndPredict(file, progressInterval) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            const response = await fetch('/predict', { method: 'POST', body: formData });
+            if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); }
+            const data = await response.json();
+            
+            // Complete progress bar
+            clearInterval(progressInterval);
+            progressBar.style.width = '100%';
+            
+            setTimeout(() => {
+                analysisProgress.classList.add('hidden');
+                analysisProgress.style.display = 'none';
+                
+                // Ensure results section stays visible
+                resultsSection.style.display = 'block';
+                resultsSection.style.visibility = 'visible';
+                resultsSection.style.opacity = '1';
+                
+                displayResults(data);
+                console.log('Results should now be displayed'); // Debug log
+            }, 1000);
+            
+        } catch (error) {
+            console.error('Error during prediction:', error);
+            clearInterval(progressInterval);
+            analysisProgress.classList.add('hidden');
+            diseaseName.textContent = 'Analysis Failed';
+            confidenceScore.textContent = 'Please try again';
+            recommendationOutput.innerHTML = `<div class="text-red-500 text-center p-8"><i class="fas fa-exclamation-triangle text-4xl mb-4"></i><p>Analysis failed. Please try again or check your internet connection.</p></div>`;
+        }
+    }
+
+    function displayResults(data) {
+        diseaseName.textContent = data.disease;
+        const confidence = parseFloat(data.confidence.replace('%', ''));
+        confidenceScore.textContent = data.confidence;
+        confidenceBar.style.width = confidence + '%';
+        
+        // Update health status
+        const isHealthy = data.disease.toLowerCase().includes('healthy');
+        if (isHealthy) {
+            statusIcon.className = 'mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-2 bg-green-100';
+            statusIcon.innerHTML = '<i class="fas fa-check text-3xl text-green-600"></i>';
+            statusText.textContent = 'Plant appears healthy!';
+            statusText.className = 'font-medium text-green-600';
+        } else {
+            statusIcon.className = 'mx-auto w-16 h-16 rounded-full flex items-center justify-center mb-2 bg-red-100';
+            statusIcon.innerHTML = '<i class="fas fa-exclamation-triangle text-3xl text-red-600"></i>';
+            statusText.textContent = 'Treatment may be needed';
+            statusText.className = 'font-medium text-red-600';
+        }
+        
+        recommendationOutput.innerHTML = marked.parse(data.recommendation);
+    }
+
+    function openImageModal(src) {
+        document.getElementById('modal-image').src = src;
+        document.getElementById('image-modal').classList.remove('hidden');
+        document.getElementById('image-modal').classList.add('flex');
+    }
+
+    function closeImageModal() {
+        document.getElementById('image-modal').classList.add('hidden');
+        document.getElementById('image-modal').classList.remove('flex');
+    }
+
+    // Load recent diagnoses
+    document.addEventListener('DOMContentLoaded', function() {
+        loadRecentDiagnoses();
+    });
+
+    async function loadRecentDiagnoses() {
+        try {
+            const response = await fetch('/api/recent-diagnoses');
+            const diagnoses = await response.json();
+            const recentDiagnoses = document.getElementById('recent-diagnoses');
+            
+            if (diagnoses.length === 0) {
+                recentDiagnoses.innerHTML = `
+                    <div class="glass-effect rounded-xl p-6 hover-glow transition-all col-span-full">
+                        <div class="text-center">
+                            <i class="fas fa-history text-4xl text-white mb-4"></i>
+                            <p class="text-white">Your recent diagnoses will appear here</p>
+                            <p class="text-sm text-gray-300 mt-2">Upload your first plant image to get started!</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                let diagnosesHTML = '';
+                diagnoses.forEach(diagnosis => {
+                    const isHealthy = diagnosis.disease.toLowerCase().includes('healthy');
+                    const statusColor = isHealthy ? 'text-green-400' : 'text-red-400';
+                    const statusIcon = isHealthy ? 'fa-check-circle' : 'fa-exclamation-triangle';
+                    
+                    diagnosesHTML += `
+                        <div class="glass-effect rounded-xl p-4 hover-glow transition-all transform hover:scale-105">
+                            <div class="space-y-3">
+                                <div class="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                    <img src="/uploads/${diagnosis.image_filename}" alt="Plant diagnosis" class="w-full h-full object-cover">
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white truncate">${diagnosis.disease}</h3>
+                                    <div class="flex items-center space-x-2 mt-1">
+                                        <i class="fas ${statusIcon} ${statusColor}"></i>
+                                        <span class="text-sm font-medium text-gray-200">${diagnosis.confidence}</span>
+                                    </div>
+                                    <p class="text-xs text-gray-300 mt-2">${diagnosis.timestamp}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                recentDiagnoses.innerHTML = diagnosesHTML;
+            }
+        } catch (error) {
+            console.error('Error loading recent diagnoses:', error);
+            const recentDiagnoses = document.getElementById('recent-diagnoses');
+            recentDiagnoses.innerHTML = `
+                <div class="glass-effect rounded-xl p-4 hover-glow transition-all col-span-full">
+                    <div class="text-center">
+                        <i class="fas fa-history text-4xl text-white mb-4"></i>
+                        <p class="text-white">Your recent diagnoses will appear here</p>
+                    </div>
+                </div>
+            `;
+        }
+    }
+</script>
+</div>
+{% endblock %}

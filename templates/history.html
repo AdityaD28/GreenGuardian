@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+{% block title %}Diagnosis History - GreenGuardian{% endblock %}
+{% block content %}
+<div class="animate-fade-in">
+    <!-- Header -->
+    <div class="text-center mb-12">
+        <h1 class="text-4xl font-bold text-white mb-4">
+            <i class="fas fa-history text-primary-400 mr-3"></i>
+            Your Plant Diagnosis History
+        </h1>
+        <p class="text-xl text-gray-300">Track your plant health journey and revisit past recommendations</p>
+    </div>
+
+    {% if history %}
+        <!-- Stats Overview -->
+        <div class="grid md:grid-cols-4 gap-6 mb-12">
+            <div class="glass-effect rounded-xl p-6 text-center hover-glow transition-all">
+                <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-chart-line text-2xl text-blue-600"></i>
+                </div>
+                <div class="text-2xl font-bold text-white">{{ history|length }}</div>
+                <div class="text-sm text-gray-300">Total Diagnoses</div>
+            </div>
+            
+            <div class="glass-effect rounded-xl p-6 text-center hover-glow transition-all">
+                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-leaf text-2xl text-green-600"></i>
+                </div>
+                {% set healthy_count = namespace(value=0) %}
+                {% for item in history %}
+                    {% if 'healthy' in item.disease_name.lower() %}
+                        {% set healthy_count.value = healthy_count.value + 1 %}
+                    {% endif %}
+                {% endfor %}
+                <div class="text-2xl font-bold text-white">{{ healthy_count.value }}</div>
+                <div class="text-sm text-gray-300">Healthy Plants</div>
+            </div>
+            
+            <div class="glass-effect rounded-xl p-6 text-center hover-glow transition-all">
+                <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-exclamation-triangle text-2xl text-red-600"></i>
+                </div>
+                <div class="text-2xl font-bold text-white">{{ history|length - healthy_count.value }}</div>
+                <div class="text-sm text-gray-300">Issues Detected</div>
+            </div>
+            
+            <div class="glass-effect rounded-xl p-6 text-center hover-glow transition-all">
+                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fas fa-calendar text-2xl text-purple-600"></i>
+                </div>
+                {% if history|length > 0 %}
+                    {% set total_confidence = namespace(value=0) %}
+                    {% for item in history %}
+                        {% set total_confidence.value = total_confidence.value + item.confidence %}
+                    {% endfor %}
+                    <div class="text-2xl font-bold text-white">{{ "%.1f"|format(total_confidence.value / history|length) }}%</div>
+                {% else %}
+                    <div class="text-2xl font-bold text-white">0%</div>
+                {% endif %}
+                <div class="text-sm text-gray-300">Avg. Confidence</div>
+            </div>
+        </div>
+
+        <!-- Filter and Search -->
+        <div class="glass-effect rounded-xl p-6 mb-8">
+            <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <i class="fas fa-search absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input type="text" id="search-input" placeholder="Search diagnoses..." 
+                               class="pl-48 pr-4 py-3 bg-gray-700 border border-gray-600 text-white placeholder-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64">
+                    </div>
+                    <select id="filter-select" class="px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent">
+                        <option value="all">All Diagnoses</option>
+                        <option value="healthy">Healthy Plants</option>
+                        <option value="issues">Issues Detected</option>
+                        <option value="high-confidence">High Confidence (>80%)</option>
+                    </select>
+                </div>
+                <div class="flex items-center space-x-2 text-sm text-gray-300">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Click on any diagnosis to expand details</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Items -->
+        <div id="history-container" class="space-y-6">
+        {% for item in history %}
+            <div class="diagnosis-item glass-effect rounded-2xl overflow-hidden hover-glow transition-all duration-300 cursor-pointer" 
+                 data-search="{{ item.disease_name.lower() }} {{ item.timestamp.strftime('%B %d, %Y').lower() }}"
+                 data-category="{{ 'healthy' if 'healthy' in item.disease_name.lower() else 'issues' }}"
+                 data-confidence="{{ item.confidence }}"
+                 onclick="toggleExpand(this)">
+                
+                <div class="p-6">
+                    <div class="grid lg:grid-cols-4 gap-6 items-center">
+                        <!-- Image -->
+                        <div class="relative">
+                            <img src="{{ url_for('uploaded_file', filename=item.image_filename) }}" 
+                                 alt="Plant diagnosis" 
+                                 class="rounded-xl w-full h-32 object-cover transition-transform duration-300 hover:scale-105">
+                            <div class="absolute top-2 right-2 bg-black/50 text-white px-2 py-1 rounded text-xs">
+                                <i class="fas fa-search-plus"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Basic Info -->
+                        <div class="lg:col-span-2">
+                            <div class="flex items-center space-x-2 mb-2">
+                                <div class="w-3 h-3 rounded-full {{ 'bg-green-500' if 'healthy' in item.disease_name.lower() else 'bg-red-500' }}"></div>
+                                <span class="text-sm text-gray-400">{{ item.timestamp.strftime('%B %d, %Y at %I:%M %p') }}</span>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-2">{{ item.disease_name.title() }}</h3>
+                            <div class="flex items-center space-x-4">
+                                <div class="flex items-center space-x-2">
+                                    <span class="text-sm font-medium text-gray-300">Confidence:</span>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="w-20 bg-gray-600 rounded-full h-2">
+                                            <div class="h-2 rounded-full transition-all {{ 'bg-green-500' if item.confidence > 80 else 'bg-yellow-500' if item.confidence > 60 else 'bg-red-500' }}" style="width: {{ item.confidence }}%"></div>
+                                        </div>
+                                        <span class="text-sm font-bold text-white">{{ "%.1f"|format(item.confidence) }}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Status & Actions -->
+                        <div class="text-center lg:text-right">
+                            <div class="inline-flex items-center space-x-2 {{ 'bg-green-100 text-green-700' if 'healthy' in item.disease_name.lower() else 'bg-red-100 text-red-700' }} px-3 py-1 rounded-full text-sm font-medium mb-3">
+                                <i class="fas {{ 'fa-check-circle' if 'healthy' in item.disease_name.lower() else 'fa-exclamation-triangle' }}"></i>
+                                <span>{{ 'Healthy' if 'healthy' in item.disease_name.lower() else 'Needs Attention' }}</span>
+                            </div>
+                            <div class="flex justify-center lg:justify-end space-x-2">
+                                <button class="text-primary-400 hover:text-primary-300 p-2 view-image-btn" data-image-url="{{ url_for('uploaded_file', filename=item.image_filename) }}" title="View Full Image">
+                                    <i class="fas fa-expand-alt"></i>
+                                </button>
+                                <div class="expand-icon text-gray-400 p-2 transition-transform duration-300">
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Expandable Recommendation Section -->
+                <div class="recommendation-section max-h-0 overflow-hidden transition-all duration-500 ease-in-out">
+                    <div class="border-t border-gray-600 p-6 bg-gradient-to-r from-gray-800/50 to-gray-700/50">
+                        <div class="flex items-center space-x-2 mb-4">
+                            <i class="fas fa-robot text-primary-400"></i>
+                            <h4 class="text-xl font-bold text-white">AI Treatment Recommendation</h4>
+                        </div>
+                        <div class="recommendation-content prose max-w-none custom-scrollbar bg-gray-800/50 rounded-lg p-4 border border-gray-600 text-gray-200">
+                            {{ item.recommendation }}
+                        </div>
+                        <div class="mt-4 flex justify-end space-x-2">
+                            <button class="text-sm text-gray-300 hover:text-primary-400 inline-flex items-center space-x-1" onclick="copyRecommendation(this)">
+                                <i class="fas fa-copy"></i>
+                                <span>Copy Recommendation</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+
+        <!-- No Results Message -->
+        <div id="no-results" class="hidden text-center py-12">
+            <i class="fas fa-search text-6xl text-gray-400 mb-4"></i>
+            <h3 class="text-xl font-bold text-white mb-2">No diagnoses found</h3>
+            <p class="text-gray-300">Try adjusting your search or filter criteria</p>
+        </div>
+
+    {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-16">
+            <div class="glass-effect rounded-2xl p-12 max-w-lg mx-auto">
+                <div class="floating-animation mb-6">
+                    <i class="fas fa-seedling text-6xl text-gray-400"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-white mb-4">No Diagnosis History Yet</h2>
+                <p class="text-gray-300 mb-8">Start your plant health journey by uploading your first plant image!</p>
+                <a href="{{ url_for('index') }}" class="bg-gradient-to-r from-primary-500 to-primary-600 text-white font-bold py-3 px-8 rounded-xl hover-glow transition-all inline-flex items-center space-x-2">
+                    <i class="fas fa-camera"></i>
+                    <span>Upload First Plant</span>
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Image Modal -->
+<div id="image-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50" onclick="closeImageModal()">
+    <div class="max-w-4xl max-h-full p-4 relative">
+        <img id="modal-image" src="#" alt="Full size image" class="max-w-full max-h-full rounded-lg">
+        <button onclick="closeImageModal()" class="absolute top-2 right-2 text-white text-2xl hover:text-gray-300 bg-black/50 rounded-full w-10 h-10 flex items-center justify-center">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    // Render markdown for all recommendation fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const recommendationDivs = document.querySelectorAll('.recommendation-content');
+        recommendationDivs.forEach(div => {
+            div.innerHTML = marked.parse(div.textContent || div.innerText);
+        });
+    });
+
+    // Search and filter functionality
+    const searchInput = document.getElementById('search-input');
+    const filterSelect = document.getElementById('filter-select');
+    const historyContainer = document.getElementById('history-container');
+    const noResults = document.getElementById('no-results');
+
+    function filterDiagnoses() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const filterValue = filterSelect.value;
+        const items = document.querySelectorAll('.diagnosis-item');
+        let visibleCount = 0;
+
+        items.forEach(item => {
+            const searchData = item.dataset.search;
+            const category = item.dataset.category;
+            const confidence = parseFloat(item.dataset.confidence);
+
+            let matchesSearch = searchData.includes(searchTerm);
+            let matchesFilter = true;
+
+            switch(filterValue) {
+                case 'healthy':
+                    matchesFilter = category === 'healthy';
+                    break;
+                case 'issues':
+                    matchesFilter = category === 'issues';
+                    break;
+                case 'high-confidence':
+                    matchesFilter = confidence > 80;
+                    break;
+            }
+
+            if (matchesSearch && matchesFilter) {
+                item.style.display = 'block';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        if (visibleCount === 0) {
+            historyContainer.style.display = 'none';
+            noResults.classList.remove('hidden');
+        } else {
+            historyContainer.style.display = 'block';
+            noResults.classList.add('hidden');
+        }
+    }
+
+    searchInput.addEventListener('input', filterDiagnoses);
+    filterSelect.addEventListener('change', filterDiagnoses);
+
+    // Image modal functionality for view buttons
+    document.querySelectorAll('.view-image-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const imageUrl = this.dataset.imageUrl;
+            openImageModal(imageUrl);
+        });
+    });
+
+    // Expand/collapse functionality
+    function toggleExpand(element) {
+        const recommendationSection = element.querySelector('.recommendation-section');
+        const expandIcon = element.querySelector('.expand-icon i');
+        
+        if (recommendationSection.style.maxHeight === '0px' || !recommendationSection.style.maxHeight) {
+            recommendationSection.style.maxHeight = recommendationSection.scrollHeight + 'px';
+            expandIcon.style.transform = 'rotate(180deg)';
+            element.classList.add('expanded');
+        } else {
+            recommendationSection.style.maxHeight = '0px';
+            expandIcon.style.transform = 'rotate(0deg)';
+            element.classList.remove('expanded');
+        }
+    }
+
+    // Image modal functionality
+    function openImageModal(src) {
+        document.getElementById('modal-image').src = src;
+        document.getElementById('image-modal').classList.remove('hidden');
+        document.getElementById('image-modal').classList.add('flex');
+    }
+
+    function closeImageModal() {
+        document.getElementById('image-modal').classList.add('hidden');
+        document.getElementById('image-modal').classList.remove('flex');
+    }
+
+    // Copy recommendation functionality
+    function copyRecommendation(button) {
+        const recommendationDiv = button.closest('.recommendation-section').querySelector('.recommendation-content');
+        const text = recommendationDiv.textContent || recommendationDiv.innerText;
+        
+        navigator.clipboard.writeText(text).then(() => {
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-check text-green-600"></i><span>Copied!</span>';
+            setTimeout(() => {
+                button.innerHTML = originalText;
+            }, 2000);
+        });
+    }
+</script>
+
+<style>
+    .diagnosis-item.expanded {
+        transform: scale(1.02);
+    }
+    
+    .recommendation-section {
+        transition: max-height 0.5s ease-in-out;
+    }
+</style>
+{% endblock %}
